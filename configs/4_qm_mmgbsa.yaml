@@ -10,15 +10,15 @@ input_files:
   # ========== 필수 입력 파일 (5개) ==========
 
   # 1. Complex Structure (복합체 구조 파일) - REQUIRED
-  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/step5_production.tpr"
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production.tpr"
   # TPR 또는 PDB 형식
 
   # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
-  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/fit.xtc"
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa/example/fit.xtc"
   # XTC 또는 TRR 형식
 
   # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
-  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/topol.top"
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa/example/topol.top"
   # TOP 형식  # CHARMM36m 역장 사용시 반드시 필요!
 
   # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
@@ -26,17 +26,17 @@ input_files:
   # 단백질 그룹 번호
 
   # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
-  ligand_group: 13
+  ligand_group: 20
   # 리간드 그룹 번호
 
   # ========== 선택 파일 (권장) ==========
 
   # Complex Index (복합체 인덱스 파일) - Optional
-  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/index.ndx"
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa/example/index.ndx"
   # NDX 형식
 
   # Reference Structure (참조 구조) - Optional but RECOMMENDED
-  reference_structure: ""
+  reference_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production_with_chains.pdb"
   # 올바른 잔기 번호와 chain ID를 가진 완전한 구조
 
   # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
@@ -57,14 +57,10 @@ input_files:
 # Execution Options (실행 옵션)
 ################################################################################
 execution:
-  # MPI 병렬화 사용 여부
-  mpi: true
-  # QM/MM은 MPI 지원 제한적 (확인 필요)
-
-  # 사용할 CPU 코어 수
-  cores: 2
-  # 코어 수 ≤ 프레임 수 필요 (제약사항)
-  # 프레임=2, 코어=2 → OK!
+  # 사용할 CPU 코어 수 (OpenMP 스레드)
+  cores: 5
+  # QM/MM 계산: MM/GB 부분에서 멀티스레딩 사용
+  # QM 계산(SQM) 자체는 단일 스레드로 실행됨
 
 ################################################################################
 # Solvent Model Selection (용매 모델 선택)
@@ -95,7 +91,7 @@ qm_mm:
   # 주의: PM3/AM1은 SQM(기본 포함), PM6는 MOPAC 필요!
 
   # QM 영역 잔기 선택
-  qm_residues: "within 3"
+  qm_residues: "A/122 A/119 A/128 F/9 F/7 F/1 F/5 F/3 F/8 F/10 F/6"
   #
   # ========== 3가지 선택 방법 ==========
   #
@@ -161,9 +157,9 @@ trajectory:
 ################################################################################
 entropy:
   # 엔트로피 계산 활성화
-  enabled: false
+  enabled: true
   # ⚠️ QM/MM + 엔트로피는 계산 시간이 매우 오래 걸림!
-  # 필요시에만 enabled: true로 변경
+  # 실제 사용 시 프레임 수를 최소화하세요 (endframe: 50 이하 권장)
 
   # 엔트로피 계산 방법 (CHARMM36m 호환성 확인 필수!)
   method: ie
@@ -182,7 +178,7 @@ general:
   startframe: 1
 
   # 끝 프레임
-  endframe: 20
+  endframe: 50
   # *** 중요: QM/MM은 매우 느리므로 프레임 수 제한 필수! ***
   # 권장: endframe: 100 또는 더 적게
   # 테스트용: 20으로 줄임 (총 2 프레임만 계산)
@@ -205,6 +201,7 @@ general:
   # 임시 파일 보관
   keep_files: 1
   # QM/MM은 디버깅을 위해 파일 보관 권장
+  # 1 = 중간 파일 보관 (PDB, 토폴로지, QM 영역 등)
 
   # 출력 상세도
   verbose: 2

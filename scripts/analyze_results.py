@@ -1499,6 +1499,38 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
     def __init__(self, result_dir):
         super().__init__(result_dir, "QM/MMGBSA", "4_qm_mmgbsa")
 
+    def parse_final_results(self):
+        """Parse FINAL_RESULTS_MMPBSA.dat with QM/MM specific fields"""
+        import re
+
+        # Get base results from parent class
+        results = super().parse_final_results()
+        if not results:
+            return None
+
+        # Parse QM-specific ESCF energies
+        dat_file = self.result_dir / "FINAL_RESULTS_MMPBSA.dat"
+        with open(dat_file, 'r', encoding='latin-1') as f:
+            content = f.read()
+
+        # Parse ESCF (Self-Consistent Field energy) - QM specific
+        # Complex ESCF
+        escf_com_match = re.search(r'Complex:.*?ESCF\s+([-\d.]+)', content, re.DOTALL)
+        if escf_com_match:
+            results['escf_com'] = float(escf_com_match.group(1))
+
+        # Receptor ESCF
+        escf_rec_match = re.search(r'Receptor:.*?ESCF\s+([-\d.]+)', content, re.DOTALL)
+        if escf_rec_match:
+            results['escf_rec'] = float(escf_rec_match.group(1))
+
+        # Ligand ESCF
+        escf_lig_match = re.search(r'Ligand:.*?ESCF\s+([-\d.]+)', content, re.DOTALL)
+        if escf_lig_match:
+            results['escf_lig'] = float(escf_lig_match.group(1))
+
+        return results
+
     def analyze(self):
         """Perform analysis"""
         print(f"[INFO] Analyzing QM/MMGBSA results...")
@@ -1519,13 +1551,198 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
                 f.write("  • Polarization effects\n")
                 f.write("- Compare with standard MM results (Type 1) to assess QM effects\n")
 
-            # Generate same visualizations as Type 1 (QM/MM has same structure)
-            self.plot_energy_components(results)
+            # Generate QM/MM specific visualizations
+            self.plot_qmmm_energy_components(results)
 
             # Check for decomposition
             decomp_file = self.result_dir / "FINAL_DECOMP_MMPBSA.dat"
             if decomp_file.exists():
                 self.analyze_decomposition()
+
+    def plot_qmmm_energy_components(self, results):
+        """Plot QM/MM energy components with QM-specific insights (Type 1 quality)"""
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        # Create high-quality figure with 3 subplots (same as Type 1)
+        fig = plt.figure(figsize=(20, 6))
+        gs = fig.add_gridspec(1, 3, width_ratios=[1, 1.2, 1.5])
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1])
+        ax3 = fig.add_subplot(gs[2])
+
+        fig.suptitle('QM/MMGBSA Energy Analysis', fontsize=18, fontweight='bold', y=1.02)
+
+        # ========== Plot 1: Summary (ΔG gas, ΔG solv, ΔG total) ==========
+        components = ['ΔG gas', 'ΔG solv', 'ΔG total']
+        values = [
+            results['delta_g_gas'],
+            results['delta_g_solv'],
+            results['delta_total']
+        ]
+        errors = [
+            results['delta_g_gas_std'],
+            results['delta_g_solv_std'],
+            results['delta_total_std']
+        ]
+        colors = ['#ff6b6b', '#4ecdc4', '#45b7d1']
+
+        bars1 = ax1.bar(components, values, yerr=errors, capsize=5, color=colors,
+                       alpha=0.7, edgecolor='black', linewidth=1.5)
+
+        # Add value labels
+        for bar, val, err in zip(bars1, values, errors):
+            height = bar.get_height()
+            label_y = height + err + max(abs(height)*0.05, 5)
+            ax1.text(bar.get_x() + bar.get_width()/2., label_y,
+                    f'{val:.1f}\n±{err:.1f}',
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+        ax1.axhline(y=0, color='black', linestyle='--', linewidth=1)
+        ax1.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
+        ax1.set_title('Summary', fontsize=14, fontweight='bold')
+        ax1.grid(axis='y', alpha=0.3, linestyle='--')
+        ax1.tick_params(axis='x', labelsize=10)
+
+        # ========== Plot 2: Main Components (with ESCF - QM specific!) ==========
+        main_components = []
+        main_values = []
+        main_errors = []
+        main_colors = []
+
+        if 'delta_eel' in results:
+            main_components.append('ΔEEL\n(elec)')
+            main_values.append(results['delta_eel'])
+            main_errors.append(results['delta_eel_std'])
+            main_colors.append('#e74c3c')
+
+        if 'delta_evdw' in results:
+            main_components.append('ΔEVDW\n(vdW)')
+            main_values.append(results['delta_evdw'])
+            main_errors.append(results['delta_evdw_std'])
+            main_colors.append('#e67e22')
+
+        if 'delta_egb' in results:
+            main_components.append('ΔEGB\n(GB)')
+            main_values.append(results['delta_egb'])
+            main_errors.append(results['delta_egb_std'])
+            main_colors.append('#3498db')
+
+        if 'delta_esurf' in results:
+            main_components.append('ΔESURF\n(surf)')
+            main_values.append(results['delta_esurf'])
+            main_errors.append(results['delta_esurf_std'])
+            main_colors.append('#1abc9c')
+
+        # Add ESCF (QM-specific) - This is the key difference!
+        if 'escf_com' in results and 'escf_rec' in results and 'escf_lig' in results:
+            delta_escf = results['escf_com'] - results['escf_rec'] - results['escf_lig']
+            main_components.append('ΔESCF\n(QM)')
+            main_values.append(delta_escf)
+            main_errors.append(0)  # ESCF doesn't have reported std in output
+            main_colors.append('#9b59b6')  # Purple for QM-specific
+
+        bars2 = ax2.bar(main_components, main_values, yerr=main_errors,
+                       capsize=5, color=main_colors, alpha=0.7,
+                       edgecolor='black', linewidth=1.5)
+
+        # Add value labels
+        for bar, val, err in zip(bars2, main_values, main_errors):
+            height = bar.get_height()
+            label_y = height + err + max(abs(height)*0.05, 5) if height >= 0 else height - err - max(abs(height)*0.05, 5)
+            ax2.text(bar.get_x() + bar.get_width()/2., label_y,
+                    f'{val:.1f}',
+                    ha='center', va='bottom' if height >= 0 else 'top',
+                    fontsize=9, fontweight='bold')
+
+        ax2.axhline(y=0, color='black', linestyle='--', linewidth=1)
+        ax2.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
+        ax2.set_title('Main Components + QM', fontsize=14, fontweight='bold')
+        ax2.grid(axis='y', alpha=0.3, linestyle='--')
+        ax2.tick_params(axis='x', labelsize=10)
+
+        # ========== Plot 3: QM Region Info (text panel) ==========
+        ax3.axis('off')
+
+        # Parse QM region from FINAL_RESULTS_MMPBSA.dat
+        dat_file = self.result_dir / "FINAL_RESULTS_MMPBSA.dat"
+        qm_residues = "Not found"
+        qm_theory = "Unknown"
+        num_frames = "Unknown"
+
+        if dat_file.exists():
+            with open(dat_file, 'r', encoding='latin-1') as f:
+                content = f.read()
+                for line in content.split('\n'):
+                    if 'QM/MM: Residues' in line:
+                        parts = line.split('Residues')[1].split('are')[0].strip()
+                        qm_residues = parts
+                    if 'Quantum Hamiltonian' in line:
+                        qm_theory = line.split('Hamiltonian')[1].strip()
+                    if 'frames' in line.lower() and 'complex' in line.lower():
+                        import re
+                        match = re.search(r'(\d+)\s+complex\s+frames', line, re.IGNORECASE)
+                        if match:
+                            num_frames = match.group(1)
+
+        qm_info_text = "╔" + "═"*58 + "╗\n"
+        qm_info_text += "║ QM/MMGBSA Calculation Details" + " "*28 + "║\n"
+        qm_info_text += "╚" + "═"*58 + "╝\n\n"
+
+        qm_info_text += f"QM Theory:        {qm_theory}\n"
+        qm_info_text += f"Frames analyzed:  {num_frames}\n\n"
+
+        qm_info_text += "─"*60 + "\n"
+        qm_info_text += "QM Region Residues:\n"
+        qm_info_text += f"  {qm_residues}\n\n"
+
+        qm_info_text += "─"*60 + "\n"
+        qm_info_text += "ESCF Energies (Self-Consistent Field - QM Only):\n"
+        if 'escf_com' in results:
+            qm_info_text += f"  Complex:  {results['escf_com']:>10.2f} kcal/mol\n"
+        if 'escf_rec' in results:
+            qm_info_text += f"  Receptor: {results['escf_rec']:>10.2f} kcal/mol\n"
+        if 'escf_lig' in results:
+            qm_info_text += f"  Ligand:   {results['escf_lig']:>10.2f} kcal/mol\n"
+        if all(k in results for k in ['escf_com', 'escf_rec', 'escf_lig']):
+            delta_escf = results['escf_com'] - results['escf_rec'] - results['escf_lig']
+            qm_info_text += f"  ΔESCF:    {delta_escf:>10.2f} kcal/mol ⭐\n"
+
+        qm_info_text += "\n" + "─"*60 + "\n"
+        qm_info_text += "✓ QM Advantages over Standard MM/PBSA:\n"
+        qm_info_text += "  • Metal coordination (Zn²⁺, Mg²⁺, Fe, etc.)\n"
+        qm_info_text += "  • Covalent inhibitors\n"
+        qm_info_text += "  • Charge transfer effects\n"
+        qm_info_text += "  • Electronic polarization\n"
+        qm_info_text += "  • π-π stacking interactions\n\n"
+
+        # Add entropy info if available
+        if 'dg_binding' in results and 'has_entropy' in results:
+            qm_info_text += "─"*60 + "\n"
+            qm_info_text += "Entropy-Corrected Results:\n"
+            qm_info_text += f"  ΔH (enthalpy):  {results['delta_total']:>10.2f} kcal/mol\n"
+            if 'entropy_tds' in results:
+                qm_info_text += f"  -TΔS (entropy): {results['entropy_tds']:>10.2f} kcal/mol\n"
+            qm_info_text += f"  ΔG binding:     {results['dg_binding']:>10.2f} kcal/mol\n"
+
+        qm_info_text += "\n" + "─"*60 + "\n"
+        qm_info_text += "💡 Recommendation:\n"
+        qm_info_text += "  Compare with Type 1 (MM/PBSA) to quantify\n"
+        qm_info_text += "  the impact of QM treatment on binding energy."
+
+        ax3.text(0.05, 0.95, qm_info_text, transform=ax3.transAxes,
+                fontsize=10, verticalalignment='top',
+                fontfamily='monospace',
+                bbox=dict(boxstyle='round', facecolor='#fff4e6', alpha=0.8,
+                         edgecolor='#ff9800', linewidth=2))
+
+        plt.tight_layout()
+
+        # Save figure
+        output_file = self.output_dir / "qmmm_energy_analysis.png"
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        print(f"[INFO] QM/MM energy plot saved: {output_file.name}")
+        plt.close()
 
 
 class EntropyAnalyzer(MMPBSAAnalyzer):

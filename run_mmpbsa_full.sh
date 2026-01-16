@@ -600,6 +600,14 @@ with open('$OPT_CONFIG_YAML', 'r') as f:
         print_msg "Calculation type: Stability"
     fi
 
+    # Auto-enable CSV output for QM/MMGBSA (config 4)
+    if [[ "$OPT_CONFIG_YAML" == *"4_qm_mmgbsa.yaml"* ]] || [[ "$YAML_CALC_TYPE" == "QM/MMGBSA" ]]; then
+        if [ -z "$OPT_ENERGY_OUTPUT" ]; then
+            OPT_ENERGY_OUTPUT="FINAL_RESULTS_MMPBSA.csv"
+            print_msg "QM/MMGBSA detected: Auto-enabling CSV output (-eo $OPT_ENERGY_OUTPUT)"
+        fi
+    fi
+
     # Check for Alanine Scanning with multiple residues
     if [[ "$YAML_CALC_TYPE" =~ alanine ]]; then
         print_msg "Calculation type: Alanine Scanning"
