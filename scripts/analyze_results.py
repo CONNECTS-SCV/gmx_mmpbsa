@@ -1560,20 +1560,22 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
                 self.analyze_decomposition()
 
     def plot_qmmm_energy_components(self, results):
-        """Plot QM/MM energy components with QM-specific insights (Type 1 quality)"""
+        """Plot QM/MM energy components with QM-specific insights - 3 separate files"""
         import matplotlib.pyplot as plt
         import numpy as np
 
-        # Create high-quality figure with 3 subplots (same as Type 1)
-        fig = plt.figure(figsize=(20, 6))
-        gs = fig.add_gridspec(1, 3, width_ratios=[1, 1.2, 1.5])
-        ax1 = fig.add_subplot(gs[0])
-        ax2 = fig.add_subplot(gs[1])
-        ax3 = fig.add_subplot(gs[2])
+        # Plot each panel as a separate file
+        self._plot_qmmm_summary(results)
+        self._plot_qmmm_main_components(results)
+        self._plot_qmmm_info_panel(results)
 
-        fig.suptitle('QM/MMGBSA Energy Analysis', fontsize=18, fontweight='bold', y=1.02)
+    def _plot_qmmm_summary(self, results):
+        """Panel 1: Summary (ΔG gas, ΔG solv, ΔG total)"""
+        import matplotlib.pyplot as plt
 
-        # ========== Plot 1: Summary (ΔG gas, ΔG solv, ΔG total) ==========
+        fig, ax = plt.subplots(figsize=(8, 6))
+        fig.suptitle('QM/MMGBSA Energy Summary', fontsize=16, fontweight='bold')
+
         components = ['ΔG gas', 'ΔG solv', 'ΔG total']
         values = [
             results['delta_g_gas'],
@@ -1587,24 +1589,62 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
         ]
         colors = ['#ff6b6b', '#4ecdc4', '#45b7d1']
 
-        bars1 = ax1.bar(components, values, yerr=errors, capsize=5, color=colors,
-                       alpha=0.7, edgecolor='black', linewidth=1.5)
+        bars = ax.bar(components, values, yerr=errors, capsize=5, color=colors,
+                     alpha=0.7, edgecolor='black', linewidth=1.5)
 
-        # Add value labels
-        for bar, val, err in zip(bars1, values, errors):
+        # Add value labels at bar ends (or outside if bar is too small)
+        import numpy as np
+        y_range = max(values) - min(values) if values else 1
+        threshold = y_range * 0.15  # 15% of range as threshold
+
+        for bar, val, err in zip(bars, values, errors):
             height = bar.get_height()
-            label_y = height + err + max(abs(height)*0.05, 5)
-            ax1.text(bar.get_x() + bar.get_width()/2., label_y,
-                    f'{val:.1f}\n±{err:.1f}',
-                    ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-        ax1.axhline(y=0, color='black', linestyle='--', linewidth=1)
-        ax1.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
-        ax1.set_title('Summary', fontsize=14, fontweight='bold')
-        ax1.grid(axis='y', alpha=0.3, linestyle='--')
-        ax1.tick_params(axis='x', labelsize=10)
+            # If bar is large enough, place label at the end inside
+            if abs(height) > threshold:
+                if height >= 0:
+                    label_y = height * 0.85  # Near top inside
+                    color = 'white'
+                    va = 'top'
+                else:
+                    label_y = height * 0.85  # Near bottom inside
+                    color = 'white'
+                    va = 'bottom'
+            else:
+                # Bar too small, place outside
+                if height >= 0:
+                    label_y = height + err + y_range * 0.03
+                    color = 'black'
+                    va = 'bottom'
+                else:
+                    label_y = height - err - y_range * 0.03
+                    color = 'black'
+                    va = 'top'
 
-        # ========== Plot 2: Main Components (with ESCF - QM specific!) ==========
+            ax.text(bar.get_x() + bar.get_width()/2., label_y,
+                   f'{val:.1f}\n±{err:.1f}',
+                   ha='center', va=va, fontsize=9, fontweight='bold',
+                   color=color)
+
+        ax.axhline(y=0, color='black', linestyle='--', linewidth=1)
+        ax.set_ylabel('Energy (kcal/mol)', fontsize=14, fontweight='bold')
+        ax.set_title('Energy Summary', fontsize=15, fontweight='bold', pad=15)
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.tick_params(axis='x', labelsize=12)
+
+        plt.tight_layout()
+        output_file = self.output_dir / "1_qmmm_summary.png"
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        print(f"[INFO] Panel 1 saved: {output_file.name}")
+        plt.close()
+
+    def _plot_qmmm_main_components(self, results):
+        """Panel 2: Main Components (with ESCF - QM specific!)"""
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        fig.suptitle('QM/MMGBSA Main Energy Components', fontsize=16, fontweight='bold')
+
         main_components = []
         main_values = []
         main_errors = []
@@ -1639,30 +1679,64 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
             delta_escf = results['escf_com'] - results['escf_rec'] - results['escf_lig']
             main_components.append('ΔESCF\n(QM)')
             main_values.append(delta_escf)
-            main_errors.append(0)  # ESCF doesn't have reported std in output
+            main_errors.append(0)
             main_colors.append('#9b59b6')  # Purple for QM-specific
 
-        bars2 = ax2.bar(main_components, main_values, yerr=main_errors,
-                       capsize=5, color=main_colors, alpha=0.7,
-                       edgecolor='black', linewidth=1.5)
+        bars = ax.bar(main_components, main_values, yerr=main_errors,
+                     capsize=5, color=main_colors, alpha=0.7,
+                     edgecolor='black', linewidth=1.5)
 
-        # Add value labels
-        for bar, val, err in zip(bars2, main_values, main_errors):
+        # Add value labels at bar ends (or outside if bar is too small)
+        import numpy as np
+        y_range = max(main_values) - min(main_values) if main_values else 1
+        threshold = y_range * 0.12  # 12% threshold for more components
+
+        for bar, val, err in zip(bars, main_values, main_errors):
             height = bar.get_height()
-            label_y = height + err + max(abs(height)*0.05, 5) if height >= 0 else height - err - max(abs(height)*0.05, 5)
-            ax2.text(bar.get_x() + bar.get_width()/2., label_y,
-                    f'{val:.1f}',
-                    ha='center', va='bottom' if height >= 0 else 'top',
-                    fontsize=9, fontweight='bold')
 
-        ax2.axhline(y=0, color='black', linestyle='--', linewidth=1)
-        ax2.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
-        ax2.set_title('Main Components + QM', fontsize=14, fontweight='bold')
-        ax2.grid(axis='y', alpha=0.3, linestyle='--')
-        ax2.tick_params(axis='x', labelsize=10)
+            # If bar is large enough, place label at the end inside
+            if abs(height) > threshold:
+                if height >= 0:
+                    label_y = height * 0.85  # Near top inside
+                    color = 'white'
+                    va = 'top'
+                else:
+                    label_y = height * 0.85  # Near bottom inside
+                    color = 'white'
+                    va = 'bottom'
+            else:
+                # Bar too small, place outside
+                if height >= 0:
+                    label_y = height + err + y_range * 0.02
+                    color = 'black'
+                    va = 'bottom'
+                else:
+                    label_y = height - err - y_range * 0.02
+                    color = 'black'
+                    va = 'top'
 
-        # ========== Plot 3: QM Region Info (text panel) ==========
-        ax3.axis('off')
+            ax.text(bar.get_x() + bar.get_width()/2., label_y,
+                   f'{val:.1f}',
+                   ha='center', va=va,
+                   fontsize=8, fontweight='bold',
+                   color=color)
+
+        ax.axhline(y=0, color='black', linestyle='--', linewidth=1)
+        ax.set_ylabel('Energy (kcal/mol)', fontsize=14, fontweight='bold')
+        ax.set_title('Main Components + QM (ΔESCF)', fontsize=15, fontweight='bold', pad=15)
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
+        ax.tick_params(axis='x', labelsize=11)
+
+        plt.tight_layout()
+        output_file = self.output_dir / "2_qmmm_components.png"
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        print(f"[INFO] Panel 2 saved: {output_file.name}")
+        plt.close()
+
+    def _plot_qmmm_info_panel(self, results):
+        """Panel 3: 1 row × 3 columns layout with info + bar charts"""
+        import matplotlib.pyplot as plt
+        import numpy as np
 
         # Parse QM region from FINAL_RESULTS_MMPBSA.dat
         dat_file = self.result_dir / "FINAL_RESULTS_MMPBSA.dat"
@@ -1685,63 +1759,210 @@ class QMMMAnalyzer(MMPBSAAnalyzer):
                         if match:
                             num_frames = match.group(1)
 
-        qm_info_text = "╔" + "═"*58 + "╗\n"
-        qm_info_text += "║ QM/MMGBSA Calculation Details" + " "*28 + "║\n"
-        qm_info_text += "╚" + "═"*58 + "╝\n\n"
+        # Create figure with 1 row × 3 columns
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+        fig.suptitle('QM/MMGBSA Calculation Details', fontsize=18, fontweight='bold', y=0.98)
 
-        qm_info_text += f"QM Theory:        {qm_theory}\n"
-        qm_info_text += f"Frames analyzed:  {num_frames}\n\n"
+        # ========== Column 1: Setup + QM Advantages (Text) ==========
+        ax1.axis('off')
 
-        qm_info_text += "─"*60 + "\n"
-        qm_info_text += "QM Region Residues:\n"
-        qm_info_text += f"  {qm_residues}\n\n"
+        # Setup info
+        setup_text = f"Calculation Setup\n" + "="*40 + "\n"
+        setup_text += f"QM Theory: {qm_theory}\n"
+        setup_text += f"Frames: {num_frames}\n"
+        setup_text += f"Method: QM/MMGBSA\n\n"
 
-        qm_info_text += "─"*60 + "\n"
-        qm_info_text += "ESCF Energies (Self-Consistent Field - QM Only):\n"
+        # QM Region
+        setup_text += f"QM Region Residues\n" + "="*40 + "\n"
+        # Wrap residues text
+        if len(qm_residues) > 35:
+            words = qm_residues.split()
+            lines = []
+            current_line = []
+            current_length = 0
+            for word in words:
+                if current_length + len(word) + 1 <= 35:
+                    current_line.append(word)
+                    current_length += len(word) + 1
+                else:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                    current_length = len(word)
+            if current_line:
+                lines.append(' '.join(current_line))
+            qm_residues_wrapped = '\n'.join(lines)
+        else:
+            qm_residues_wrapped = qm_residues
+        setup_text += f"{qm_residues_wrapped}\n\n"
+
+        # QM Advantages
+        setup_text += f"QM Advantages\n" + "="*40 + "\n"
+        setup_text += "✓ Metal coordination\n"
+        setup_text += "✓ Covalent binding\n"
+        setup_text += "✓ Charge transfer\n"
+        setup_text += "✓ Polarization effects\n"
+        setup_text += "✓ π-π stacking\n"
+
+        ax1.text(0.05, 0.95, setup_text,
+                ha='left', va='top',
+                fontsize=10, fontfamily='monospace',
+                bbox=dict(boxstyle='round,pad=1.5',
+                         facecolor='#e8f5e9',
+                         edgecolor='#4caf50',
+                         linewidth=2, alpha=0.9),
+                transform=ax1.transAxes)
+
+        # ========== Column 2: ESCF Bar Chart ==========
+        escf_components = []
+        escf_values = []
+        escf_colors = []
+
         if 'escf_com' in results:
-            qm_info_text += f"  Complex:  {results['escf_com']:>10.2f} kcal/mol\n"
+            escf_components.append('Complex')
+            escf_values.append(results['escf_com'])
+            escf_colors.append('#ff9800')
+
         if 'escf_rec' in results:
-            qm_info_text += f"  Receptor: {results['escf_rec']:>10.2f} kcal/mol\n"
+            escf_components.append('Receptor')
+            escf_values.append(results['escf_rec'])
+            escf_colors.append('#03a9f4')
+
         if 'escf_lig' in results:
-            qm_info_text += f"  Ligand:   {results['escf_lig']:>10.2f} kcal/mol\n"
+            escf_components.append('Ligand')
+            escf_values.append(results['escf_lig'])
+            escf_colors.append('#4caf50')
+
         if all(k in results for k in ['escf_com', 'escf_rec', 'escf_lig']):
             delta_escf = results['escf_com'] - results['escf_rec'] - results['escf_lig']
-            qm_info_text += f"  ΔESCF:    {delta_escf:>10.2f} kcal/mol ⭐\n"
+            escf_components.append('ΔESCF')
+            escf_values.append(delta_escf)
+            escf_colors.append('#9c27b0')
 
-        qm_info_text += "\n" + "─"*60 + "\n"
-        qm_info_text += "✓ QM Advantages over Standard MM/PBSA:\n"
-        qm_info_text += "  • Metal coordination (Zn²⁺, Mg²⁺, Fe, etc.)\n"
-        qm_info_text += "  • Covalent inhibitors\n"
-        qm_info_text += "  • Charge transfer effects\n"
-        qm_info_text += "  • Electronic polarization\n"
-        qm_info_text += "  • π-π stacking interactions\n\n"
+        if escf_values:
+            bars = ax2.bar(escf_components, escf_values, color=escf_colors,
+                          alpha=0.7, edgecolor='black', linewidth=1.5)
 
-        # Add entropy info if available
+            # Add labels with adaptive positioning
+            y_range = max(escf_values) - min(escf_values) if escf_values else 1
+            threshold = y_range * 0.12
+
+            for bar, val in zip(bars, escf_values):
+                height = bar.get_height()
+
+                if abs(height) > threshold:
+                    if height >= 0:
+                        label_y = height * 0.85
+                        color = 'white'
+                        va = 'top'
+                    else:
+                        label_y = height * 0.85
+                        color = 'white'
+                        va = 'bottom'
+                else:
+                    if height >= 0:
+                        label_y = height + y_range * 0.03
+                        color = 'black'
+                        va = 'bottom'
+                    else:
+                        label_y = height - y_range * 0.03
+                        color = 'black'
+                        va = 'top'
+
+                ax2.text(bar.get_x() + bar.get_width()/2., label_y,
+                        f'{val:.1f}',
+                        ha='center', va=va,
+                        fontsize=9, fontweight='bold',
+                        color=color)
+
+            ax2.axhline(y=0, color='black', linestyle='--', linewidth=1)
+            ax2.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
+            ax2.set_title('ESCF Energies (QM)', fontsize=14, fontweight='bold', pad=15)
+            ax2.grid(axis='y', alpha=0.3, linestyle='--')
+            ax2.tick_params(axis='x', labelsize=10)
+
+        # ========== Column 3: Entropy Bar Chart ==========
         if 'dg_binding' in results and 'has_entropy' in results:
-            qm_info_text += "─"*60 + "\n"
-            qm_info_text += "Entropy-Corrected Results:\n"
-            qm_info_text += f"  ΔH (enthalpy):  {results['delta_total']:>10.2f} kcal/mol\n"
+            entropy_components = []
+            entropy_values = []
+            entropy_errors = []
+            entropy_colors = []
+
+            # ΔH (enthalpy)
+            if 'delta_total' in results:
+                entropy_components.append('ΔH\n(enthalpy)')
+                entropy_values.append(results['delta_total'])
+                entropy_errors.append(results.get('delta_total_std', 0))
+                entropy_colors.append('#ff6b6b')
+
+            # -TΔS (entropy)
             if 'entropy_tds' in results:
-                qm_info_text += f"  -TΔS (entropy): {results['entropy_tds']:>10.2f} kcal/mol\n"
-            qm_info_text += f"  ΔG binding:     {results['dg_binding']:>10.2f} kcal/mol\n"
+                entropy_components.append('-TΔS\n(entropy)')
+                entropy_values.append(results['entropy_tds'])
+                entropy_errors.append(results.get('entropy_tds_std', 0))
+                entropy_colors.append('#4ecdc4')
 
-        qm_info_text += "\n" + "─"*60 + "\n"
-        qm_info_text += "💡 Recommendation:\n"
-        qm_info_text += "  Compare with Type 1 (MM/PBSA) to quantify\n"
-        qm_info_text += "  the impact of QM treatment on binding energy."
+            # ΔG binding
+            if 'dg_binding' in results:
+                entropy_components.append('ΔG\n(binding)')
+                entropy_values.append(results['dg_binding'])
+                entropy_errors.append(results.get('dg_binding_std', 0))
+                entropy_colors.append('#45b7d1')
 
-        ax3.text(0.05, 0.95, qm_info_text, transform=ax3.transAxes,
-                fontsize=10, verticalalignment='top',
-                fontfamily='monospace',
-                bbox=dict(boxstyle='round', facecolor='#fff4e6', alpha=0.8,
-                         edgecolor='#ff9800', linewidth=2))
+            if entropy_values:
+                bars = ax3.bar(entropy_components, entropy_values,
+                              yerr=entropy_errors, capsize=5,
+                              color=entropy_colors, alpha=0.7,
+                              edgecolor='black', linewidth=1.5)
+
+                # Add labels with adaptive positioning
+                y_range = max(entropy_values) - min(entropy_values) if entropy_values else 1
+                threshold = y_range * 0.15
+
+                for bar, val, err in zip(bars, entropy_values, entropy_errors):
+                    height = bar.get_height()
+
+                    if abs(height) > threshold:
+                        if height >= 0:
+                            label_y = height * 0.85
+                            color = 'white'
+                            va = 'top'
+                        else:
+                            label_y = height * 0.85
+                            color = 'white'
+                            va = 'bottom'
+                    else:
+                        if height >= 0:
+                            label_y = height + err + y_range * 0.03
+                            color = 'black'
+                            va = 'bottom'
+                        else:
+                            label_y = height - err - y_range * 0.03
+                            color = 'black'
+                            va = 'top'
+
+                    ax3.text(bar.get_x() + bar.get_width()/2., label_y,
+                            f'{val:.1f}\n±{err:.1f}',
+                            ha='center', va=va,
+                            fontsize=9, fontweight='bold',
+                            color=color)
+
+                ax3.axhline(y=0, color='black', linestyle='--', linewidth=1)
+                ax3.set_ylabel('Energy (kcal/mol)', fontsize=12, fontweight='bold')
+                ax3.set_title('Entropy-Corrected Results', fontsize=14, fontweight='bold', pad=15)
+                ax3.grid(axis='y', alpha=0.3, linestyle='--')
+                ax3.tick_params(axis='x', labelsize=10)
+        else:
+            # No entropy data - show placeholder
+            ax3.axis('off')
+            ax3.text(0.5, 0.5, 'Entropy correction\nnot available',
+                    ha='center', va='center',
+                    fontsize=12, color='gray',
+                    transform=ax3.transAxes)
 
         plt.tight_layout()
-
-        # Save figure
-        output_file = self.output_dir / "qmmm_energy_analysis.png"
+        output_file = self.output_dir / "3_qmmm_info.png"
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
-        print(f"[INFO] QM/MM energy plot saved: {output_file.name}")
+        print(f"[INFO] Panel 3 saved: {output_file.name}")
         plt.close()
 
 
