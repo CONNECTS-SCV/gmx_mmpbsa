@@ -1,0 +1,160 @@
+# Category 3: Alanine Scanning
+# 중요 잔기를 찾기 위한 체계적 돌연변이
+
+calculation_type: alanine_scanning
+
+################################################################################
+# Input Files (입력 파일) - REQUIRED (필수)
+################################################################################
+input_files:
+  # ========== 필수 입력 파일 (5개) ==========
+
+  # 1. Complex Structure (복합체 구조 파일) - REQUIRED
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production.tpr"
+  # TPR 또는 PDB 형식  # MD 시뮬레이션의 구조 파일
+
+  # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa/example/fit.xtc"
+  # XTC 또는 TRR 형식  # MD 시뮬레이션 궤적 파일
+
+  # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa/example/topol.top"
+  # TOP 형식  # CHARMM36m 역장 사용시 반드시 필요!
+
+  # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
+  receptor_group: 1
+  # 단백질 그룹 번호  # gmx make_ndx -f complex.tpr 로 확인
+
+  # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
+  ligand_group: 13
+  # 리간드 그룹 번호  # gmx make_ndx -f complex.tpr 로 확인
+
+  # ========== 선택 파일 (권장) ==========
+
+  # Complex Index (복합체 인덱스 파일) - Optional
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa/example/index.ndx"
+  # NDX 형식  # 그룹 정의 파일 (생략시 자동 생성)
+
+  # Reference Structure (참조 구조) - Optional but RECOMMENDED
+  reference_structure: ""
+  # 올바른 잔기 번호와 chain ID를 가진 완전한 구조
+
+  # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
+  # 수용체와 리간드를 별도로 시뮬레이션한 경우에만 사용
+
+  receptor_structure: ""      # 수용체 구조 파일
+  receptor_trajectory: ""     # 수용체 궤적 파일
+  receptor_topology: ""       # 수용체 토폴로지
+  receptor_index: ""          # 수용체 인덱스 파일
+
+  ligand_structure: ""        # 리간드 구조 파일
+  ligand_trajectory: ""       # 리간드 궤적 파일
+  ligand_topology: ""         # 리간드 토폴로지
+  ligand_index: ""            # 리간드 인덱스 파일
+  ligand_mol2: ""             # 리간드 MOL2 파일 (Amber 역장용, CHARMM 불필요)
+
+################################################################################
+# Execution Options (실행 옵션)
+################################################################################
+execution:
+  # MPI 병렬화 사용 여부
+  mpi: true
+  # 알라닌 스캐닝은 계산량이 많으므로 MPI 권장
+
+  # 사용할 CPU 코어 수
+  cores: 16
+  # 잔기 수만큼 계산하므로 코어 많이 사용 권장
+
+################################################################################
+# Solvent Model Selection (용매 모델 선택)
+################################################################################
+solvent_model:
+  # 용매 모델 방법
+  method: gb
+  # 알라닌 스캐닝은 GB 또는 PB만 지원  # 3drism은 지원 안 함!
+
+  # GB 전용 옵션
+  gb_model: 8
+  # 8 = GBneck2 (권장)
+
+################################################################################
+# Alanine Scanning Settings (알라닌 스캐닝 설정)
+################################################################################
+alanine_scanning:
+  # 돌연변이 타입
+  mutant: ALA
+  # ALA = 알라닌으로 돌연변이  # GLY = 글리신으로 돌연변이
+
+  # 돌연변이시킬 잔기
+  residues: "A/40, A/43, A/46, A/49, A/51, A/55, A/60, A/65, A/72, A/74"
+  #
+  # ✅ 이제 여러 잔기 자동 스캔 지원!
+  #
+  # 단일 잔기:
+  # residues: "A/50"
+  #
+  # 여러 잔기 (쉼표로 구분):
+  # residues: "A/50, A/51, A/52, B/100"
+  #
+  # 여러 잔기 (공백으로 구분):
+  # residues: "A/50 A/51 A/52 B/100"
+  #
+  # 올바른 형식: "ChainID/잔기번호"
+  # - "A/50" = Chain A의 50번 잔기 ✅
+  # - "B/123" = Chain B의 123번 잔기 ✅
+  #
+  # Chain ID 확인 방법:
+  # - PDB 파일에서 확인 (보통 A, B, C 등)
+  # - 예: grep "^ATOM" structure.pdb | awk '{print $5}' | sort -u
+
+  # Mutant만 계산 여부
+  mutant_only: false
+  # false = ΔΔG 계산 (wild-type과 mutant 비교) ← 권장
+  # true = mutant 에너지만 계산 (비교 안 함)
+
+################################################################################
+# Trajectory Mode (궤적 모드)
+################################################################################
+trajectory:
+  mode: single
+  # 알라닌 스캐닝은 항상 single 모드
+
+################################################################################
+# General Settings (일반 설정)
+################################################################################
+general:
+  # 시작 프레임
+  startframe: 1
+
+  # 끝 프레임
+  endframe: 20
+  # 알라닌 스캐닝은 계산량이 많으므로
+  # 프레임 수를 줄이는 것을 권장 (예: endframe: 100)
+
+  # 프레임 간격
+  interval: 1
+  # 또는 interval을 크게 설정 (예: 10)
+
+  # Force Field
+  forcefields: CHARMM36m
+
+  # 온도 (K)
+  temperature: 298.15
+
+  # 염 농도 (M)
+  salt_concentration: 0.15
+
+  # 임시 파일 보관
+  keep_files: 0
+
+  # 출력 상세도
+  verbose: 1
+
+################################################################################
+# Advanced Options (고급 옵션)
+################################################################################
+advanced:
+  surften: 0.0072
+  surfoff: 0.0
+  intdiel: 1.0
+  extdiel: 80.0

@@ -1,0 +1,140 @@
+# gmx_MMPBSA Configuration File (YAML)
+# All gmx_MMPBSA features organized into 6 main categories
+
+################################################################################
+# 1. CALCULATION TYPE (Required - choose one)
+################################################################################
+calculation_type: binding_free_energy
+# Options:
+#   - binding_free_energy  : Calculate binding free energy (ΔG_bind)
+#   - stability           : Calculate stability of single molecule
+#   - alanine_scanning    : Alanine/Glycine scanning for mutation effects
+#   - qm_mmgbsa          : QM/MM hybrid calculations
+
+################################################################################
+# 2. SOLVENT MODEL (Required)
+################################################################################
+solvent_model:
+  method: gb              # gb, pb, 3drism
+
+  # GB-specific options (only when method=gb)
+  gb_model: 8             # igb: 1 (HCT), 2 (OBC1), 5 (OBC2), 7 (GBneck), 8 (GBneck2)
+
+  # PB-specific options (only when method=pb)
+  pb_solver: 1            # ipb: 1 (linear), 2 (nonlinear), etc.
+
+  # 3D-RISM specific options (only when method=3drism)
+  rism_closure: kh        # kh, hnc, psen
+
+################################################################################
+# 3. TRAJECTORY MODE
+################################################################################
+trajectory:
+  mode: single            # single, multiple
+  # single: complex trajectory only (receptor/ligand extracted)
+  # multiple: separate receptor and ligand trajectories
+
+################################################################################
+# 4. ENTROPY CORRECTION (Optional)
+################################################################################
+entropy:
+  enabled: false
+  method: nmode           # nmode, qh (quasi-harmonic), ie (interaction entropy), c2
+
+  # NMODE-specific
+  nmode_maxcyc: 10000
+  nmode_drms: 0.001
+
+  # Quasi-Harmonic specific
+  qh_start_frame: 1
+  qh_end_frame: -1
+  qh_interval: 1
+
+  # Interaction Entropy specific
+  ie_segment: 25
+
+  # C2 entropy
+  c2_entropy: false
+
+################################################################################
+# 5. DECOMPOSITION ANALYSIS (Optional)
+################################################################################
+decomposition:
+  enabled: false
+  type: per_residue       # per_residue, pairwise
+  idecomp: 2              # 1, 2 (per-residue) | 3, 4 (pairwise)
+
+  # Options
+  dec_verbose: 0          # 0-3, verbosity level
+  print_res: "within 6"   # Residues to print (e.g., "1-10", "within 6")
+  csv_format: true        # Export to CSV
+
+################################################################################
+# 6. MEMBRANE PROTEINS (Optional)
+################################################################################
+membrane:
+  enabled: false
+  model: 0                # memopt: 0 (no membrane), 1-3 (different models)
+  thickness: 20.0         # Membrane thickness (Å)
+  center_z: 0.0           # Membrane center z-coordinate
+
+################################################################################
+# ALANINE SCANNING OPTIONS (when calculation_type=alanine_scanning)
+################################################################################
+alanine_scanning:
+  mutant: ALA             # ALA or GLY
+  residues: "1-100"       # Residues to mutate (e.g., "1-10,50,60-70")
+  mutant_only: false      # Only calculate mutant (no ΔΔG)
+
+################################################################################
+# QM/MM OPTIONS (when calculation_type=qm_mmgbsa)
+################################################################################
+qm_mm:
+  qm_theory: PM3          # PM3, AM1, DFTB, etc.
+  qm_residues: ""         # QM residues (e.g., "100,101,102")
+  qm_charge_com: 0        # QM charge for complex
+  qm_charge_rec: 0        # QM charge for receptor
+  qm_charge_lig: 0        # QM charge for ligand
+  qmcut: 9999.0           # QM cutoff
+
+################################################################################
+# GENERAL OPTIONS
+################################################################################
+general:
+  # System
+  startframe: 1           # Starting frame
+  endframe: -1            # Ending frame (-1 = all)
+  interval: 1             # Frame interval
+
+  # Forcefield
+  forcefields: CHARMM36m  # Force field used
+
+  # Temperature
+  temperature: 298.15     # Temperature (K)
+
+  # Salt concentration
+  salt_concentration: 0.15  # M
+
+  # Output
+  keep_files: 0           # 0-2, level of temporary files to keep
+  verbose: 1              # 0-2, verbosity
+
+################################################################################
+# ADVANCED OPTIONS (rarely changed)
+################################################################################
+advanced:
+  # Solvation parameters
+  surften: 0.0072         # Surface tension (kcal/mol/Å²)
+  surfoff: 0.0            # Surface offset
+
+  # Dielectric constants
+  intdiel: 1.0            # Internal dielectric
+  extdiel: 80.0           # External dielectric
+
+  # PB grid
+  fillratio: 4.0          # Grid fill ratio
+  scale: 2.0              # Grid spacing scale
+
+  # Convergence
+  maxcyc: 1000            # Max cycles
+  tolerance: 0.0001       # Convergence tolerance

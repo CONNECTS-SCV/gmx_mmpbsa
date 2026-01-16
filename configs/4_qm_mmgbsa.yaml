@@ -1,0 +1,221 @@
+# Category 4: QM/MMGBSA Calculation
+# 양자역학 / 분자역학 하이브리드
+
+calculation_type: QM/MMGBSA
+
+################################################################################
+# Input Files (입력 파일) - REQUIRED (필수)
+################################################################################
+input_files:
+  # ========== 필수 입력 파일 (5개) ==========
+
+  # 1. Complex Structure (복합체 구조 파일) - REQUIRED
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/step5_production.tpr"
+  # TPR 또는 PDB 형식
+
+  # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/fit.xtc"
+  # XTC 또는 TRR 형식
+
+  # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/topol.top"
+  # TOP 형식  # CHARMM36m 역장 사용시 반드시 필요!
+
+  # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
+  receptor_group: 1
+  # 단백질 그룹 번호
+
+  # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
+  ligand_group: 13
+  # 리간드 그룹 번호
+
+  # ========== 선택 파일 (권장) ==========
+
+  # Complex Index (복합체 인덱스 파일) - Optional
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa_workflow/example/index.ndx"
+  # NDX 형식
+
+  # Reference Structure (참조 구조) - Optional but RECOMMENDED
+  reference_structure: ""
+  # 올바른 잔기 번호와 chain ID를 가진 완전한 구조
+
+  # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
+  # 수용체와 리간드를 별도로 시뮬레이션한 경우에만 사용
+
+  receptor_structure: ""      # 수용체 구조 파일
+  receptor_trajectory: ""     # 수용체 궤적 파일
+  receptor_topology: ""       # 수용체 토폴로지
+  receptor_index: ""          # 수용체 인덱스 파일
+
+  ligand_structure: ""        # 리간드 구조 파일
+  ligand_trajectory: ""       # 리간드 궤적 파일
+  ligand_topology: ""         # 리간드 토폴로지
+  ligand_index: ""            # 리간드 인덱스 파일
+  ligand_mol2: ""             # 리간드 MOL2 파일 (Amber 역장용, CHARMM 불필요)
+
+################################################################################
+# Execution Options (실행 옵션)
+################################################################################
+execution:
+  # MPI 병렬화 사용 여부
+  mpi: true
+  # QM/MM은 MPI 지원 제한적 (확인 필요)
+
+  # 사용할 CPU 코어 수
+  cores: 2
+  # 코어 수 ≤ 프레임 수 필요 (제약사항)
+  # 프레임=2, 코어=2 → OK!
+
+################################################################################
+# Solvent Model Selection (용매 모델 선택)
+################################################################################
+solvent_model:
+  # 용매 모델 방법
+  method: gb
+  # QM/MM은 GB만 지원!
+
+  # GB 모델
+  gb_model: 8
+  # 8 = GBneck2 (권장)
+
+################################################################################
+# QM/MM Settings (QM/MM 설정) - IMPORTANT!
+################################################################################
+qm_mm:
+  # QM/MM 활성화
+  enabled: true
+  # *** 반드시 true로 설정! ***
+
+  # QM 이론 수준
+  qm_theory: 'PM3'
+  # PM3 = 빠름, 부정확 (SQM으로 실행 가능)
+  # PM6 = 중간 (MOPAC 필요)
+  # AM1 = 중간 (SQM으로 실행 가능)
+  # DFTB = 느림, 정확
+  # 주의: PM3/AM1은 SQM(기본 포함), PM6는 MOPAC 필요!
+
+  # QM 영역 잔기 선택
+  qm_residues: "within 3"
+  #
+  # ========== 3가지 선택 방법 ==========
+  #
+  # 방법 1: 거리 기반 자동 선택 (권장) ✅
+  # qm_residues: "within 4"
+  # - 리간드로부터 4Å 이내의 모든 잔기를 자동 선택
+  # - 가장 간단하고 안전한 방법
+  # - 거리 조절 가능 (예: within 2.5, within 6)
+  # - 권장: within 3-5 (작을수록 빠름)
+  #
+  # 방법 2: 명시적 잔기 지정
+  # qm_residues: "A/40-41,44,47 B/241"
+  # - Chain ID와 잔기 번호로 직접 지정
+  # - 범위 사용 가능 (예: A/40-50)
+  # - 여러 Chain 지정 가능 (공백으로 구분)
+  # - 예: "A/100,101,102" 또는 "100,101,102" (Chain 생략 가능)
+  #
+  # 방법 3: Amber Mask 선택 (고급)
+  # com_qmmask: "(:44,47,85&!@N,H,CA,HA,C,O) | :241"
+  # rec_qmmask: "(:44,47,85&!@N,H,CA,HA,C,O)"
+  # lig_qmmask: ":1"
+  # - Amber 스타일 원자 선택 문법 사용
+  # - 특정 원자 제외 가능 (!@N,H,CA 등)
+  # - 복잡한 선택에 유용하지만 문법 숙지 필요
+  # - com_qmmask/rec_qmmask/lig_qmmask를 qm_residues 대신 사용
+  #
+  # ⚠️ 중요 주의사항:
+  # - QM 영역은 최소화! (5-10 잔기 이내 권장)
+  # - QM 잔기가 많을수록 계산 시간 기하급수적 증가
+  # - 보통 리간드 + 핵심 활성 부위 잔기만 선택
+  # - 처음 사용시 "within 3" 또는 "within 4" 권장!
+
+  # QM 영역 전하 (Complex)
+  qm_charge_com: 0
+  # 복합체의 QM 영역 총 전하
+  # ⚠️ 반드시 시스템에 맞게 계산 필요!
+  # 전하 = (QM 영역 receptor 전하) + (QM 영역 ligand 전하)
+
+  # QM 영역 전하 (Receptor)
+  qm_charge_rec: 0
+  # 수용체의 QM 영역 총 전하
+  # ⚠️ 반드시 시스템에 맞게 계산 필요!
+  # PDB 파일에서 해당 잔기들의 전하 합산
+
+  # QM 영역 전하 (Ligand)
+  qm_charge_lig: 0
+  # 리간드의 QM 영역 총 전하
+  # ⚠️ 반드시 시스템에 맞게 계산 필요!
+  # 리간드 구조로부터 전하 확인
+
+  # QM Cutoff
+  qmcut: 9999.0
+  # QM 영역 cutoff (기본값 사용 권장)
+
+################################################################################
+# Trajectory Mode (궤적 모드)
+################################################################################
+trajectory:
+  mode: single
+
+################################################################################
+# Optional: Entropy Correction (선택: 엔트로피 보정)
+################################################################################
+entropy:
+  # 엔트로피 계산 활성화
+  enabled: false
+  # ⚠️ QM/MM + 엔트로피는 계산 시간이 매우 오래 걸림!
+  # 필요시에만 enabled: true로 변경
+
+  # 엔트로피 계산 방법 (CHARMM36m 호환성 확인 필수!)
+  method: ie
+  # ❌ nmode = Normal Mode Analysis (AMBER only! CHARMM 불가)
+  # ✅ qh = Quasi-Harmonic (CHARMM 호환, 빠름, 100-1000 프레임)
+  # ✅ ie = Interaction Entropy (CHARMM 호환, 가장 빠름, 추천, 100+ 프레임)
+  # ✅ c2 = C2 Entropy (CHARMM 호환, 빠름, 대안)
+
+  # IE 파라미터 (enabled=true이고 method=ie일 때만 사용)
+  ie_segment: 25
+
+################################################################################
+# General Settings (일반 설정)
+################################################################################
+general:
+  # 시작 프레임
+  startframe: 1
+
+  # 끝 프레임
+  endframe: 20
+  # *** 중요: QM/MM은 매우 느리므로 프레임 수 제한 필수! ***
+  # 권장: endframe: 100 또는 더 적게
+  # 테스트용: 20으로 줄임 (총 2 프레임만 계산)
+
+  # 프레임 간격
+  interval: 10
+  # *** 큰 interval 사용 권장 (10 이상) ***
+  # 예: interval: 10 = 10개 중 1개만
+  # QM/MM은 매우 느리므로 프레임 수 줄이기 필수!
+
+  # Force Field
+  forcefields: CHARMM36m
+
+  # 온도 (K)
+  temperature: 298.15
+
+  # 염 농도 (M)
+  salt_concentration: 0.15
+
+  # 임시 파일 보관
+  keep_files: 1
+  # QM/MM은 디버깅을 위해 파일 보관 권장
+
+  # 출력 상세도
+  verbose: 2
+  # 상세 출력 권장 (디버깅용)
+
+################################################################################
+# Advanced Options (고급 옵션)
+################################################################################
+advanced:
+  surften: 0.0072
+  surfoff: 0.0
+  intdiel: 1.0
+  extdiel: 80.0

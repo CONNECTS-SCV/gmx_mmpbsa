@@ -1,0 +1,184 @@
+# Category 5: Entropy Correction Methods
+# 결합 자유 에너지에 엔트로피 기여도 추가
+
+calculation_type: binding_free_energy
+
+################################################################################
+# Input Files (입력 파일) - REQUIRED (필수)
+################################################################################
+input_files:
+  # ========== 필수 입력 파일 (5개) ==========
+
+  # 1. Complex Structure (복합체 구조 파일) - REQUIRED
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production.tpr"
+  # TPR 또는 PDB 형식
+
+  # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa/example/fit.xtc"
+  # XTC 또는 TRR 형식
+
+  # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa/example/topol.top"
+  # TOP 형식
+  # CHARMM36m 역장 사용시 반드시 필요!
+
+  # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
+  receptor_group: 1
+  # 단백질 그룹 번호
+
+  # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
+  ligand_group: 13
+  # 리간드 그룹 번호
+
+  # ========== 선택 파일 ==========
+
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa/example/index.ndx"
+  reference_structure: ""
+
+  # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
+  # 수용체와 리간드를 별도로 시뮬레이션한 경우에만 사용
+
+  receptor_structure: ""      # 수용체 구조 파일
+  receptor_trajectory: ""     # 수용체 궤적 파일
+  receptor_topology: ""       # 수용체 토폴로지
+  receptor_index: ""          # 수용체 인덱스 파일
+
+  ligand_structure: ""        # 리간드 구조 파일
+  ligand_trajectory: ""       # 리간드 궤적 파일
+  ligand_topology: ""         # 리간드 토폴로지
+  ligand_index: ""            # 리간드 인덱스 파일
+  ligand_mol2: ""             # 리간드 MOL2 파일 (Amber 역장용, CHARMM 불필요)
+
+################################################################################
+# Execution Options (실행 옵션)
+################################################################################
+execution:
+  # MPI 병렬화 사용 여부
+  mpi: true
+  # NMODE는 MPI 지원 안 함
+  # IE, QH는 MPI 가능
+
+  # 사용할 CPU 코어 수
+  cores: 24
+
+################################################################################
+# Solvent Model Selection (용매 모델 선택)
+################################################################################
+solvent_model:
+  # 용매 모델 방법
+  method: gb
+  # gb, pb, 3drism 모두 가능
+
+  # GB 모델
+  gb_model: 8
+  # 8 = GBneck2 (권장)
+
+################################################################################
+# Entropy Correction (엔트로피 보정) - MAIN FEATURE!
+################################################################################
+entropy:
+  # 엔트로피 계산 활성화
+  enabled: true
+  # *** 이 파일의 핵심 기능! 반드시 true ***
+
+  # 엔트로피 계산 방법 (CHARMM36m 호환성 확인!)
+  method: ie
+  # ===== 방법 비교 =====
+  # ❌ nmode = Normal Mode Analysis (AMBER only! CHARMM 불가)
+  #   - 가장 정확
+  #   - 가장 느림 (프레임당 수 분)
+  #   - 10-50 프레임만 사용
+  #   - 작은 시스템에 적합
+  #
+  # ✅ qh = Quasi-Harmonic (CHARMM 호환)
+  #   - 빠름
+  #   - 중간 정확도
+  #   - 100-1000 프레임 필요
+  #   - 유연한 시스템에 적합
+  #
+  # ✅ ie = Interaction Entropy (CHARMM 호환, 권장!)
+  #   - 가장 빠름
+  #   - 좋은 정확도
+  #   - 100+ 프레임 필요
+  #   - 일반적 사용에 최적
+  #
+  # ✅ c2 = C2 Entropy (CHARMM 호환)
+  #   - 빠름
+  #   - 중간 정확도
+  #   - IE의 대안
+
+  # ===== NMODE 파라미터 (method=nmode일 때) =====
+  nmode_maxcyc: 10000
+  # 최대 최적화 사이클  # 수렴이 안 되면 증가 (예: 20000)
+
+  nmode_drms: 0.001
+  # 수렴 기준 (RMS gradient)  # 더 정확하려면 감소 (예: 0.0001)
+
+  # ===== Quasi-Harmonic 파라미터 (method=qh일 때) =====
+  qh_start_frame: 1
+  # QH 계산 시작 프레임
+
+  qh_end_frame: -1
+  # QH 계산 끝 프레임 (-1 = 모두)
+
+  qh_interval: 1
+  # QH 계산 프레임 간격
+
+  # ===== Interaction Entropy 파라미터 (method=ie일 때) =====
+  ie_segment: 25
+  # IE 계산을 위한 세그먼트 크기  # 보통 25 (기본값 사용 권장)
+
+  # ===== C2 Entropy 파라미터 (method=c2일 때) =====
+  c2_entropy: false
+  # method를 c2로 설정하면 자동 활성화
+
+################################################################################
+# Trajectory Mode (궤적 모드)
+################################################################################
+trajectory:
+  mode: single
+
+################################################################################
+# General Settings (일반 설정)
+################################################################################
+general:
+  # 시작 프레임
+  startframe: 1
+
+  # 끝 프레임 (방법에 따라 조정!)
+  endframe: 100
+  # NMODE: 10-50 (매우 느림!)
+  # QH: 100-1000 (많을수록 좋음)
+  # IE: 100+ (100 이상 권장)
+  # C2: 100+ (100 이상 권장)
+
+  # 프레임 간격
+  interval: 1
+  # NMODE: 10-20 (많이 건너뛰기)
+  # QH/IE/C2: 1 (모든 프레임 사용)
+
+  # Force Field
+  forcefields: CHARMM36m
+
+  # 온도 (K)
+  temperature: 298.15
+
+  # 염 농도 (M)
+  salt_concentration: 0.15
+
+  # 임시 파일 보관
+  keep_files: 0
+
+  # 출력 상세도
+  verbose: 1
+
+################################################################################
+# Advanced Options (고급 옵션)
+################################################################################
+advanced:
+  surften: 0.0072
+  surfoff: 0.0
+  intdiel: 1.0
+  extdiel: 80.0
+  fillratio: 4.0
+  scale: 2.0

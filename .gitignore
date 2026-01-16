@@ -1,0 +1,19 @@
+# Ignore large data files
+example/*.xtc
+example/*.trr
+example/*.tpr
+example/*.ndx
+example/*.top
+example/*.gro
+example/*.pdb
+example/MMPBSA_*
+*.log
+
+# Ignore temporary files
+*.pyc
+__pycache__/
+.DS_Store
+*~
+
+# Ignore example directory
+example/

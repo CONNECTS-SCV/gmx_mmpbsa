@@ -1,0 +1,189 @@
+# Category 6: Energy Decomposition Analysis
+
+# 잔기별 또는 쌍별 에너지 기여도
+
+calculation_type: Decomposition
+
+################################################################################
+# Input Files (입력 파일) - REQUIRED (필수)
+################################################################################
+input_files:
+  # ========== 필수 입력 파일 (5개) ==========
+
+  # 1. Complex Structure (복합체 구조 파일) - REQUIRED
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production.tpr"
+  # TPR 또는 PDB 형식
+
+  # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa/example/fit.xtc"
+  # XTC 또는 TRR 형식
+
+  # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa/example/topol.top"
+  # TOP 형식
+
+  # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
+  receptor_group: 1
+  # 단백질 그룹 번호
+
+  # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
+  ligand_group: 13
+  # 리간드 그룹 번호
+
+  # ========== 선택 파일 (권장) ==========
+
+  # Complex Index (복합체 인덱스 파일) - Optional
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa/example/index.ndx"
+  # NDX 형식
+  # 그룹 정의 파일 (생략시 자동 생성)
+
+  # Reference Structure (참조 구조) - Optional but RECOMMENDED
+  reference_structure: ""
+  # 올바른 잔기 번호와 chain ID를 가진 완전한 구조
+
+  # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
+  # 수용체와 리간드를 별도로 시뮬레이션한 경우에만 사용
+
+  receptor_structure: ""      # 수용체 구조 파일
+  receptor_trajectory: ""     # 수용체 궤적 파일
+  receptor_topology: ""       # 수용체 토폴로지
+  receptor_index: ""          # 수용체 인덱스 파일
+
+  ligand_structure: ""        # 리간드 구조 파일
+  ligand_trajectory: ""       # 리간드 궤적 파일
+  ligand_topology: ""         # 리간드 토폴로지
+  ligand_index: ""            # 리간드 인덱스 파일
+  ligand_mol2: ""             # 리간드 MOL2 파일 (Amber 역장용, CHARMM 불필요)
+
+################################################################################
+# Execution Options (실행 옵션)
+################################################################################
+execution:
+  # MPI 병렬화 사용 여부
+  mpi: true
+  # 에너지 분해는 계산량이 많으므로 MPI 권장
+
+  # 사용할 CPU 코어 수
+  cores: 16
+  # 잔기 수가 많으면 코어 많이 사용 권장
+
+################################################################################
+# Solvent Model Selection (용매 모델 선택)
+################################################################################
+solvent_model:
+  # 용매 모델 방법
+  method: gb
+  # 에너지 분해는 GB 또는 PB만 지원  # 3drism은 지원 안 함!
+
+  # GB 모델
+  gb_model: 8
+  # 8 = GBneck2 (권장)
+
+################################################################################
+# Decomposition Settings (에너지 분해 설정) - MAIN FEATURE!
+################################################################################
+decomposition:
+  # 에너지 분해 활성화
+  enabled: true
+  # *** 이 파일의 핵심 기능! 반드시 true ***
+
+  # 분해 타입
+  type: pairwise
+  # ===== 타입 비교 =====
+  # per_residue = 잔기별 분해
+  #   - 각 잔기가 결합에 얼마나 기여하는지
+  #   - 어떤 잔기가 중요한지 식별
+  #   - 빠름
+  #   - 먼저 이것부터 시작 권장
+  #
+  # pairwise = 쌍별 분해
+  #   - 잔기-잔기 상호작용 에너지
+  #   - 상호작용 네트워크 분석
+  #   - 매우 느림 (N² 계산)
+  #   - 상세 분석시에만 사용
+
+  # 분해 방법 (idecomp)
+  idecomp: 4
+  # ===== idecomp 값 설명 =====
+  # 1 = per-residue (1-4 항 제외)
+  # 2 = per-residue (1-4 항 포함) ← 권장!
+  # 3 = pairwise (1-4 항 제외)
+  # 4 = pairwise (1-4 항 포함)
+  #
+  # 1-4 항: 3개 결합 떨어진 원자 간 상호작용
+  # 포함하는 것이 더 정확 (idecomp=2 또는 4)
+
+  # CSV 형식으로 출력
+  csv_format: true
+  # true = CSV 파일 생성 (엑셀/파이썬에서 분석 쉬움) ← 권장
+  # false = 텍스트 출력만
+
+  # 출력 상세도
+  dec_verbose: 0
+  # 0 = 최소 출력
+  # 1 = 일반 출력 (권장)
+  # 2 = 상세 출력
+  # 3 = 매우 상세 (디버깅용)
+
+  # 출력할 잔기 선택
+  print_res: "within 6"
+  # ===== print_res 옵션 =====
+  # "within X" = 리간드 X Å 이내 잔기만
+  #   예: "within 6" (6Å 이내, 일반적 사용)
+  #   예: "within 8" (8Å 이내, 넓게)
+  #
+  # "1-50" = 잔기 범위
+  #   예: "1-50" (1번부터 50번 잔기)
+  #   예: "100-200" (특정 도메인)
+  #
+  # "1,5,10-20" = 특정 잔기들
+  #   예: "45,67,100-120" (관심 잔기만)
+  #
+  # "all" = 모든 잔기 (많은 출력, 비추천)
+
+################################################################################
+# Trajectory Mode (궤적 모드)
+################################################################################
+trajectory:
+  mode: single
+
+################################################################################
+# General Settings (일반 설정)
+################################################################################
+general:
+  # 시작 프레임
+  startframe: 1
+
+  # 끝 프레임
+  endframe: 100
+  # per-residue: 큰 숫자 (모든 프레임 가능)
+  # pairwise: 프레임 수 줄이기 권장 (매우 느림)
+
+  # 프레임 간격
+  interval: 1
+  # per-residue: 1 (모든 프레임)
+  # pairwise: 5-10 (간격 크게)
+
+  # Force Field
+  forcefields: CHARMM36m
+
+  # 온도 (K)
+  temperature: 298.15
+
+  # 염 농도 (M)
+  salt_concentration: 0.15
+
+  # 임시 파일 보관
+  keep_files: 0
+
+  # 출력 상세도
+  verbose: 1
+
+################################################################################
+# Advanced Options (고급 옵션)
+################################################################################
+advanced:
+  surften: 0.0072
+  surfoff: 0.0
+  intdiel: 1.0
+  extdiel: 80.0

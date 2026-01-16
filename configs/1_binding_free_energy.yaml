@@ -1,0 +1,267 @@
+# Category 1: Binding Free Energy Calculation
+# 표준 MM/GBSA 또는 MM/PBSA 결합 자유 에너지
+
+calculation_type: binding_free_energy
+
+################################################################################
+# Input Files (입력 파일) - REQUIRED (필수)
+################################################################################
+input_files:
+  # ========== 필수 입력 파일 (5개) ==========
+
+  # 1. Complex Structure (복합체 구조 파일) - REQUIRED
+  complex_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production.tpr"
+  # TPR 또는 PDB 형식
+  # MD 시뮬레이션의 구조 파일 (production TPR 권장)
+
+  # 2. Complex Trajectory (복합체 궤적 파일) - REQUIRED
+  complex_trajectory: "/home/connects_md/MODEL/gmx_mmpbsa/example/fit.xtc"
+  # XTC 또는 TRR 형식
+  # MD 시뮬레이션 궤적 파일
+
+  # 3. Complex Topology (복합체 토폴로지 파일) - REQUIRED for CHARMM
+  complex_topology: "/home/connects_md/MODEL/gmx_mmpbsa/example/topol.top"
+  # TOP 형식
+  # CHARMM36m 역장 사용시 반드시 필요!
+  # 모든 force field 파라미터 포함
+
+  # 4. Receptor Group (수용체 그룹 번호) - REQUIRED
+  receptor_group: 1
+  # Index 파일의 그룹 번호 (정수) 또는 그룹 이름 (문자열)
+  # 그룹 번호: 1 = Protein (단백질)
+  # 그룹 이름: "Protein", "Protein_A", "Chain_A" 등
+
+  # 5. Ligand Group (리간드 그룹 번호) - REQUIRED
+  ligand_group: 20
+  # Index 파일의 그룹 번호 (정수) 또는 그룹 이름 (문자열)
+  # 그룹 번호: 13 = AGLC (리간드)
+  # 그룹 이름: "AGLC", "LIG", "MOL" 등
+  # Index 파일 없으면 TPR의 그룹 번호를 따름!
+
+  # ========== 선택 파일 (권장) ==========
+
+  # Complex Index (복합체 인덱스 파일) - Optional
+  complex_index: "/home/connects_md/MODEL/gmx_mmpbsa/example/index.ndx"
+  # NDX 형식
+
+  # Reference Structure (참조 구조) - Optional but RECOMMENDED
+  reference_structure: "/home/connects_md/MODEL/gmx_mmpbsa/example/step5_production_with_chains.pdb"
+  # PDB 형식
+  # 올바른 잔기 번호와 chain ID를 가진 완전한 구조
+
+
+  # ========== Multiple Trajectory (다중 궤적) - Advanced ==========
+  # 수용체와 리간드를 별도로 시뮬레이션한 경우에만 사용
+
+  receptor_structure: ""      # 수용체 구조 파일
+  receptor_trajectory: ""     # 수용체 궤적 파일
+  receptor_topology: ""       # 수용체 토폴로지
+  receptor_index: ""          # 수용체 인덱스 파일
+
+  ligand_structure: ""        # 리간드 구조 파일
+  ligand_trajectory: ""       # 리간드 궤적 파일
+  ligand_topology: ""         # 리간드 토폴로지
+  ligand_index: ""            # 리간드 인덱스 파일
+  ligand_mol2: ""             # 리간드 MOL2 파일 (Amber 역장용, CHARMM 불필요)
+
+################################################################################
+# Execution Options (실행 옵션)
+################################################################################
+execution:
+  # MPI 병렬화 사용 여부
+  mpi: true
+  # true = MPI로 병렬 실행 (빠름, mpi4py 필요)  # false = 직렬 실행 (느림)
+
+  # 사용할 CPU 코어 수
+  cores: 16
+  # MPI 사용시 병렬 코어 개수
+
+################################################################################
+# Solvent Model Selection (용매 모델 선택)
+################################################################################
+solvent_model:
+  # 용매 모델 방법
+  method: gb
+  # gb = Generalized Born (빠름, 일반적 사용)
+  # pb = Poisson-Boltzmann (정확함, 느림)
+  # 3drism = 3D-RISM (가장 정확, 매우 느림)
+
+  # ===== GB 전용 옵션 (method=gb일 때만) =====
+  gb_model: 8
+  # GB 모델 선택 (igb 값):
+  # 1 = HCT (Hawkins-Cramer-Truhlar)
+  # 2 = OBC1 (Onufriev-Bashford-Case, 버전 1)
+  # 5 = OBC2 (Onufriev-Bashford-Case, 버전 2)
+  # 7 = GBneck (목 영역 개선)
+  # 8 = GBneck2 (가장 정확, 권장!)
+
+  # ===== PB 전용 옵션 (method=pb일 때만) =====
+  pb_solver: 1
+  # PB 솔버 선택:
+  # 1 = linear (선형, 빠름)  # 2 = nonlinear (비선형, 정확)
+
+  # ===== 3D-RISM 전용 옵션 (method=3drism일 때만) =====
+  rism_closure: kh
+  # RISM closure 방법:
+  # kh = Kovalenko-Hirata
+  # hnc = Hypernetted Chain
+  # psen = Partial Series Expansion
+
+################################################################################
+# Trajectory Mode (궤적 모드)
+################################################################################
+trajectory:
+  mode: single
+  # single = 단일 궤적 (복합체만, 수용체/리간드 자동 추출)
+  # multiple = 다중 궤적 (수용체, 리간드 별도 궤적)
+
+################################################################################
+# Optional: Entropy Correction (선택: 엔트로피 보정)
+################################################################################
+entropy:
+  # 엔트로피 계산 활성화
+  enabled: true
+  # true = 엔트로피 계산 포함 (더 정확한 자유 에너지 ΔG = ΔH - TΔS)
+  # false = 엔탈피만 계산 (빠름)
+
+  # 엔트로피 계산 방법 (CHARMM36m 호환성 확인 필수!)
+  method: ie
+  # ✅ qh = Quasi-Harmonic (CHARMM 호환, 빠름, 100-1000 프레임)
+  # ✅ ie = Interaction Entropy (CHARMM 호환, 가장 빠름, 추천, 100+ 프레임)
+  # ✅ c2 = C2 Entropy (CHARMM 호환, 빠름, 대안)
+
+  # ===== NMODE 파라미터 (method=nmode일 때) =====
+  nmode_maxcyc: 10000
+  # 최대 최적화 사이클 수
+
+  nmode_drms: 0.001
+  # 수렴 기준 (RMS gradient)
+
+  # ===== IE 파라미터 (method=ie일 때) =====
+  ie_segment: 25
+  # IE 계산을 위한 세그먼트 크기
+
+################################################################################
+# Optional: Decomposition Analysis (선택: 에너지 분해 분석)
+################################################################################
+decomposition:
+  # 에너지 분해 활성화
+  enabled: true
+  # true = 잔기별 에너지 기여도 계  # false = 에너지 분해 생략
+
+  # 분해 타입
+  type: pairwise
+  # per_residue = 잔기별 분해 (어떤 잔기가 중요한지) ← 권장
+  # pairwise = 쌍별 분해 (잔기-잔기 상호작용, 매우 느림!)
+
+  # 분해 방법 (idecomp)
+  idecomp: 4
+  # ========== Per-residue 옵션 ==========
+  # 1 = per-residue (1-4 항 제외)
+  # 2 = per-residue (1-4 항 포함) ← 권장, 현재 설정
+  # ========== Pairwise 옵션 (type: pairwise일 때만) ==========
+  # 3 = pairwise (1-4 항 제외)
+  # 4 = pairwise (1-4 항 포함)
+  # ⚠️ 주의: type과 idecomp 값이 일치해야 함!
+  #          type=per_residue → idecomp=1 또는 2
+  #          type=pairwise → idecomp=3 또는 4
+
+  # dec_verbose (분해 출력 상세도)
+  dec_verbose: 0
+  # 0 = 최소 출력 (권장, 안정적)  # 1 = 상세 출력 (디버깅용, 대규모 분석시 I/O 오류 가능)
+
+  # CSV 형식으로 출력
+  csv_format: true
+  # true = CSV 파일 생성 (엑셀에서 열기 쉬움)   # false = 텍스트 출력만
+
+  # 출력할 잔기 선택
+  print_res: "within 6"
+  # "within X" = 리간드 X Å 이내 잔기
+  # "1-50" = 잔기 1번부터 50번
+  # "1,5,10-20" = 특정 잔기들
+
+################################################################################
+# General Settings (일반 설정)
+################################################################################
+general:
+  # 시작 프레임
+  startframe: 1
+  # 궤적의 첫 번째 프레임부터 시작 (1부터 시작)
+
+  # 끝 프레임
+  endframe: 100
+  # 큰 숫자 = 모든 프레임 사용
+  # 100 = 100번째 프레임까지만 (테스트용)
+
+  # 프레임 간격
+  interval: 1
+  # 1 = 모든 프레임 사용
+  # 10 = 10개 중 1개만 사용 (빠른 테스트용)
+
+  # Force Field (역장)
+  forcefields: CHARMM36m
+  # 사용한 역장 이름
+  # CHARMM36m, AMBER99SB-ILDN 등
+
+  # 온도 (K)
+  temperature: 298.15
+  # 시뮬레이션 온도 (보통 298.15 K = 25°C)
+
+  # 염 농도 (M)
+  salt_concentration: 0.15
+  # 용액의 염 농도 (보통 0.15 M = 생리적 조건)
+
+  # 임시 파일 보관
+  keep_files: 0
+  # 0 = 임시 파일 삭제 (권장)
+  # 1 = 일부 보관
+  # 2 = 모두 보관 (디버깅용)
+
+  # 출력 상세도
+  verbose: 1
+  # 0 = 최소 출력
+  # 1 = 일반 출력
+  # 2 = 상세 출력 (디버깅용)
+
+################################################################################
+# Output Files (출력 파일 옵션)
+################################################################################
+output:
+  # 프레임별 에너지 CSV 출력
+  energy_csv: "energy_per_frame.csv"
+  # CSV 파일로 각 프레임의 에너지 값 저장
+  # 시각화 및 상세 분석에 필수!
+  # 예: "energies.csv" 또는 "" (비활성화)
+
+  # 분해 분석 CSV 출력 (decomposition이 활성화된 경우)
+  decomp_csv: "decomp_per_frame.csv"
+  # 잔기별 에너지 분해를 CSV로 저장
+  # 예: "decomp.csv" 또는 "" (비활성화)
+
+################################################################################
+# Advanced Options (고급 옵션) - 일반적으로 변경 불필요
+################################################################################
+advanced:
+  # 표면 장력 (kcal/mol/Å²)
+  surften: 0.0072
+  # 비극성 용매화 에너지 계산용
+
+  # 표면 오프셋
+  surfoff: 0.0
+  # 표면적 계산 보정값
+
+  # 내부 유전 상수
+  intdiel: 1.0
+  # 단백질/리간드 내부 (보통 1.0)
+
+  # 외부 유전 상수
+  extdiel: 80.0
+  # 물의 유전 상수 (보통 80.0)
+
+  # PB 그리드 채우기 비율
+  fillratio: 4.0
+  # PB 계산시 그리드 크기 (클수록 정확하지만 느림)
+
+  # PB 그리드 간격 스케일
+  scale: 2.0
+  # 그리드 점 밀도 (클수록 정확하지만 느림)
