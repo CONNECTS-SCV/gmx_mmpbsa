@@ -55,8 +55,7 @@ input_files:
 execution:
   # MPI 병렬화 사용 여부
   mpi: true
-  # NMODE는 MPI 지원 안 함
-  # IE, QH는 MPI 가능
+  # QH, IE, C2 모두 MPI 지원
 
   # 사용할 CPU 코어 수
   cores: 24
@@ -82,55 +81,32 @@ entropy:
   # *** 이 파일의 핵심 기능! 반드시 true ***
 
   # 엔트로피 계산 방법 (CHARMM36m 호환성 확인!)
-  method: ie
+  method: qh
   # ===== 방법 비교 =====
-  # ❌ nmode = Normal Mode Analysis (AMBER only! CHARMM 불가)
-  #   - 가장 정확
-  #   - 가장 느림 (프레임당 수 분)
-  #   - 10-50 프레임만 사용
-  #   - 작은 시스템에 적합
-  #
-  # ✅ qh = Quasi-Harmonic (CHARMM 호환)
+  # ✅ qh = Quasi-Harmonic (CHARMM 호환, 권장!)
   #   - 빠름
   #   - 중간 정확도
   #   - 100-1000 프레임 필요
   #   - 유연한 시스템에 적합
+  #   - 추가 파라미터 불필요
   #
-  # ✅ ie = Interaction Entropy (CHARMM 호환, 권장!)
+  # ✅ ie = Interaction Entropy (CHARMM 호환)
   #   - 가장 빠름
   #   - 좋은 정확도
   #   - 100+ 프레임 필요
   #   - 일반적 사용에 최적
+  #   - 주의: 극단적 에너지 값에서 오버플로우 가능
   #
   # ✅ c2 = C2 Entropy (CHARMM 호환)
   #   - 빠름
   #   - 중간 정확도
   #   - IE의 대안
 
-  # ===== NMODE 파라미터 (method=nmode일 때) =====
-  nmode_maxcyc: 10000
-  # 최대 최적화 사이클  # 수렴이 안 되면 증가 (예: 20000)
-
-  nmode_drms: 0.001
-  # 수렴 기준 (RMS gradient)  # 더 정확하려면 감소 (예: 0.0001)
-
-  # ===== Quasi-Harmonic 파라미터 (method=qh일 때) =====
-  qh_start_frame: 1
-  # QH 계산 시작 프레임
-
-  qh_end_frame: -1
-  # QH 계산 끝 프레임 (-1 = 모두)
-
-  qh_interval: 1
-  # QH 계산 프레임 간격
-
-  # ===== Interaction Entropy 파라미터 (method=ie일 때) =====
+  # ===== Interaction Entropy 파라미터 (method=ie일 때만) =====
   ie_segment: 25
-  # IE 계산을 위한 세그먼트 크기  # 보통 25 (기본값 사용 권장)
-
-  # ===== C2 Entropy 파라미터 (method=c2일 때) =====
-  c2_entropy: false
-  # method를 c2로 설정하면 자동 활성화
+  # IE 계산을 위한 세그먼트 크기
+  # 보통 25 (기본값)
+  # 오버플로우 발생시 10으로 줄이기
 
 ################################################################################
 # Trajectory Mode (궤적 모드)
@@ -147,14 +123,12 @@ general:
 
   # 끝 프레임 (방법에 따라 조정!)
   endframe: 100
-  # NMODE: 10-50 (매우 느림!)
   # QH: 100-1000 (많을수록 좋음)
   # IE: 100+ (100 이상 권장)
   # C2: 100+ (100 이상 권장)
 
   # 프레임 간격
   interval: 1
-  # NMODE: 10-20 (많이 건너뛰기)
   # QH/IE/C2: 1 (모든 프레임 사용)
 
   # Force Field
@@ -171,14 +145,3 @@ general:
 
   # 출력 상세도
   verbose: 1
-
-################################################################################
-# Advanced Options (고급 옵션)
-################################################################################
-advanced:
-  surften: 0.0072
-  surfoff: 0.0
-  intdiel: 1.0
-  extdiel: 80.0
-  fillratio: 4.0
-  scale: 2.0

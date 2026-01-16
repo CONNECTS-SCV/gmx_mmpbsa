@@ -39,22 +39,10 @@ trajectory:
 ################################################################################
 entropy:
   enabled: false
-  method: nmode           # nmode, qh (quasi-harmonic), ie (interaction entropy), c2
-
-  # NMODE-specific
-  nmode_maxcyc: 10000
-  nmode_drms: 0.001
-
-  # Quasi-Harmonic specific
-  qh_start_frame: 1
-  qh_end_frame: -1
-  qh_interval: 1
+  method: qh              # qh (quasi-harmonic), ie (interaction entropy), c2
 
   # Interaction Entropy specific
   ie_segment: 25
-
-  # C2 entropy
-  c2_entropy: false
 
 ################################################################################
 # 5. DECOMPOSITION ANALYSIS (Optional)

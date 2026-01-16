@@ -167,7 +167,6 @@ entropy:
 
   # 엔트로피 계산 방법 (CHARMM36m 호환성 확인 필수!)
   method: ie
-  # ❌ nmode = Normal Mode Analysis (AMBER only! CHARMM 불가)
   # ✅ qh = Quasi-Harmonic (CHARMM 호환, 빠름, 100-1000 프레임)
   # ✅ ie = Interaction Entropy (CHARMM 호환, 가장 빠름, 추천, 100+ 프레임)
   # ✅ c2 = C2 Entropy (CHARMM 호환, 빠름, 대안)
@@ -210,12 +209,3 @@ general:
   # 출력 상세도
   verbose: 2
   # 상세 출력 권장 (디버깅용)
-
-################################################################################
-# Advanced Options (고급 옵션)
-################################################################################
-advanced:
-  surften: 0.0072
-  surfoff: 0.0
-  intdiel: 1.0
-  extdiel: 80.0
